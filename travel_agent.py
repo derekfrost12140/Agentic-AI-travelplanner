@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 import requests
 import json
 from datetime import datetime, timedelta
+from dateutil import parser as date_parser
 
 # Load environment variables
 load_dotenv()
@@ -52,40 +53,20 @@ class TravelAgent:
             """
             # Simulate flight search - in a real app, this would call a flight API
             flights = [
-                {
-                    "airline": "Delta Airlines",
-                    "flight_number": "DL123",
-                    "departure": "08:00",
-                    "arrival": "11:30",
-                    "price": 450,
-                    "duration": "3h 30m"
-                },
-                {
-                    "airline": "American Airlines", 
-                    "flight_number": "AA456",
-                    "departure": "14:15",
-                    "arrival": "17:45",
-                    "price": 380,
-                    "duration": "3h 30m"
-                },
-                {
-                    "airline": "United Airlines",
-                    "flight_number": "UA789", 
-                    "departure": "20:30",
-                    "arrival": "23:45",
-                    "price": 520,
-                    "duration": "3h 15m"
-                }
+                {"airline": "Delta Airlines", "flight_number": "DL123", "departure": "08:00", "arrival": "11:30", "price": 450, "duration": "3h 30m"},
+                {"airline": "American Airlines", "flight_number": "AA456", "departure": "14:15", "arrival": "17:45", "price": 380, "duration": "3h 30m"},
+                {"airline": "United Airlines", "flight_number": "UA789", "departure": "20:30", "arrival": "23:45", "price": 520, "duration": "3h 15m"},
+                {"airline": "British Airways", "flight_number": "BA321", "departure": "10:00", "arrival": "13:20", "price": 410, "duration": "3h 20m"},
+                {"airline": "Air France", "flight_number": "AF654", "departure": "16:45", "arrival": "20:05", "price": 470, "duration": "3h 20m"},
+                {"airline": "Lufthansa", "flight_number": "LH987", "departure": "06:30", "arrival": "09:50", "price": 395, "duration": "3h 20m"}
             ]
-            
             result = f"Found {len(flights)} flights from {origin} to {destination} on {date}:\n\n"
             for i, flight in enumerate(flights, 1):
                 result += f"{i}. {flight['airline']} {flight['flight_number']}\n"
                 result += f"   Departure: {flight['departure']} | Arrival: {flight['arrival']}\n"
                 result += f"   Duration: {flight['duration']} | Price: ${flight['price']}\n\n"
-            
             return result
-        
+
         @tool
         def search_hotels(city: str, check_in: str, check_out: str, guests: int = 2) -> str:
             """Search for available hotels in a specific city.
@@ -101,31 +82,14 @@ class TravelAgent:
             """
             # Simulate hotel search - in a real app, this would call a hotel API
             hotels = [
-                {
-                    "name": "Grand Hotel",
-                    "rating": 4.5,
-                    "price_per_night": 200,
-                    "amenities": ["WiFi", "Pool", "Spa", "Restaurant"],
-                    "location": "City Center"
-                },
-                {
-                    "name": "Comfort Inn",
-                    "rating": 3.8,
-                    "price_per_night": 120,
-                    "amenities": ["WiFi", "Breakfast", "Parking"],
-                    "location": "Airport Area"
-                },
-                {
-                    "name": "Luxury Resort",
-                    "rating": 4.9,
-                    "price_per_night": 350,
-                    "amenities": ["WiFi", "Pool", "Spa", "Restaurant", "Gym", "Beach Access"],
-                    "location": "Beachfront"
-                }
+                {"name": "Grand Hotel", "rating": 4.5, "price_per_night": 200, "amenities": ["WiFi", "Pool", "Spa", "Restaurant"], "location": "City Center"},
+                {"name": "Comfort Inn", "rating": 3.8, "price_per_night": 120, "amenities": ["WiFi", "Breakfast", "Parking"], "location": "Airport Area"},
+                {"name": "Luxury Resort", "rating": 4.9, "price_per_night": 350, "amenities": ["WiFi", "Pool", "Spa", "Restaurant", "Gym", "Beach Access"], "location": "Beachfront"},
+                {"name": "City Suites", "rating": 4.2, "price_per_night": 180, "amenities": ["WiFi", "Gym", "Breakfast"], "location": "Business District"},
+                {"name": "Budget Stay", "rating": 3.5, "price_per_night": 90, "amenities": ["WiFi", "Parking"], "location": "Suburbs"},
+                {"name": "Boutique Escape", "rating": 4.7, "price_per_night": 270, "amenities": ["WiFi", "Spa", "Restaurant", "Bar"], "location": "Old Town"}
             ]
-            
             nights = (datetime.strptime(check_out, "%Y-%m-%d") - datetime.strptime(check_in, "%Y-%m-%d")).days
-            
             result = f"Found {len(hotels)} hotels in {city} from {check_in} to {check_out} ({nights} nights):\n\n"
             for i, hotel in enumerate(hotels, 1):
                 total_price = hotel['price_per_night'] * nights
@@ -134,37 +98,57 @@ class TravelAgent:
                 result += f"   Price per night: ${hotel['price_per_night']}\n"
                 result += f"   Total for {nights} nights: ${total_price}\n"
                 result += f"   Amenities: {', '.join(hotel['amenities'])}\n\n"
-            
             return result
-        
+
         @tool
-        def get_weather_forecast(city: str, date: str) -> str:
-            """Get weather forecast for a specific city and date.
-            
+        def get_weather_forecast(city: str, date: str = None) -> str:
+            """Get real-time weather forecast for a specific city using OpenWeatherMap API.
             Args:
                 city: City name (e.g., 'Paris', 'Tokyo', 'New York')
-                date: Date in YYYY-MM-DD format
-            
+                date: Date in YYYY-MM-DD format (optional, only current and forecast weather is supported)
             Returns:
                 String with weather information
             """
-            # Simulate weather data - in a real app, this would call a weather API
-            weather_data = {
-                "temperature": "22°C",
-                "condition": "Sunny",
-                "humidity": "65%",
-                "wind_speed": "10 km/h",
-                "precipitation_chance": "10%"
-            }
-            
-            result = f"Weather forecast for {city} on {date}:\n"
-            result += f"Temperature: {weather_data['temperature']}\n"
-            result += f"Condition: {weather_data['condition']}\n"
-            result += f"Humidity: {weather_data['humidity']}\n"
-            result += f"Wind Speed: {weather_data['wind_speed']}\n"
-            result += f"Precipitation Chance: {weather_data['precipitation_chance']}\n"
-            
-            return result
+            import requests
+            import os
+            from datetime import datetime
+            api_key = os.getenv("OPENWEATHER_API_KEY")
+            if not api_key:
+                return "OpenWeatherMap API key is missing. Please set OPENWEATHER_API_KEY in your .env file."
+            # Step 1: Get latitude and longitude for the city
+            geo_url = "http://api.openweathermap.org/geo/1.0/direct"
+            geo_params = {"q": city, "limit": 1, "appid": api_key}
+            geo_resp = requests.get(geo_url, params=geo_params)
+            geo_data = geo_resp.json()
+            if not geo_data or geo_data[0].get("lat") is None or geo_data[0].get("lon") is None:
+                return f"Could not find coordinates for {city}."
+            lat = geo_data[0]["lat"]
+            lon = geo_data[0]["lon"]
+            # Step 2: Get weather forecast
+            forecast_url = "http://api.openweathermap.org/data/2.5/forecast"
+            forecast_params = {"lat": lat, "lon": lon, "appid": api_key, "units": "imperial"}
+            forecast_resp = requests.get(forecast_url, params=forecast_params)
+            if forecast_resp.status_code != 200:
+                return f"API error: {forecast_resp.status_code} - {forecast_resp.text}"
+            forecast_data = forecast_resp.json()
+            # Find the forecast closest to the requested date (or the next available if not specified)
+            forecasts = forecast_data.get("list", [])
+            if not forecasts:
+                return f"No forecast data available for {city}."
+            # If date is provided, find the closest forecast
+            if date:
+                try:
+                    target_date = datetime.strptime(date, "%Y-%m-%d")
+                except Exception:
+                    return "Invalid date format. Please use YYYY-MM-DD."
+                # Find the forecast closest to the target date
+                closest = min(forecasts, key=lambda f: abs(datetime.strptime(f["dt_txt"], "%Y-%m-%d %H:%M:%S") - target_date))
+            else:
+                closest = forecasts[0]
+            dt_txt = closest["dt_txt"]
+            temp = closest["main"]["temp"]
+            weather = closest["weather"][0]["description"]
+            return f"Weather forecast for {city} on {dt_txt}: {temp}°F, {weather}."
         
         @tool
         def get_travel_recommendations(city: str, interests: str = "general") -> str:
