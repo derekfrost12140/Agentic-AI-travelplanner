@@ -719,6 +719,93 @@ class TravelAgent:
             """
             import os
             import requests
+            
+            # Airline code to name mapping
+            airline_names = {
+                'AC': 'Air Canada',
+                'UA': 'United Airlines',
+                'AA': 'American Airlines',
+                'DL': 'Delta Air Lines',
+                'BA': 'British Airways',
+                'LH': 'Lufthansa',
+                'AF': 'Air France',
+                'KL': 'KLM Royal Dutch Airlines',
+                'TK': 'Turkish Airlines',
+                'EK': 'Emirates',
+                'QR': 'Qatar Airways',
+                'EY': 'Etihad Airways',
+                'NH': 'All Nippon Airways',
+                'JL': 'Japan Airlines',
+                'KE': 'Korean Air',
+                'OZ': 'Asiana Airlines',
+                'PR': 'Philippine Airlines',
+                'HA': 'Hawaiian Airlines',
+                'AS': 'Alaska Airlines',
+                'WN': 'Southwest Airlines',
+                'B6': 'JetBlue Airways',
+                'NK': 'Spirit Airlines',
+                'F9': 'Frontier Airlines',
+                'VX': 'Virgin America',
+                'VS': 'Virgin Atlantic',
+                'IB': 'Iberia',
+                'AZ': 'ITA Airways',
+                'SN': 'Brussels Airlines',
+                'LX': 'Swiss International Air Lines',
+                'OS': 'Austrian Airlines',
+                'SK': 'SAS Scandinavian Airlines',
+                'AY': 'Finnair',
+                'LO': 'LOT Polish Airlines',
+                'OK': 'Czech Airlines',
+                'RO': 'TAROM',
+                'SU': 'Aeroflot',
+                'TG': 'Thai Airways',
+                'SQ': 'Singapore Airlines',
+                'CX': 'Cathay Pacific',
+                'BR': 'EVA Air',
+                'CI': 'China Airlines',
+                'MU': 'China Eastern Airlines',
+                'CA': 'Air China',
+                'CZ': 'China Southern Airlines',
+                'HU': 'Hainan Airlines',
+                'MF': 'Xiamen Airlines',
+                '3U': 'Sichuan Airlines',
+                'GS': 'Tianjin Airlines',
+                'PN': 'China West Air',
+                'G5': 'China Express Airlines',
+                'KN': 'China United Airlines',
+                'JD': 'Capital Airlines',
+                'DZ': 'Donghai Airlines',
+                'KY': 'Kunming Airlines',
+                '8L': 'Lucky Air',
+                'NS': 'Hebei Airlines',
+                'EU': 'Chengdu Airlines',
+                'TV': 'Tibet Airlines',
+                'UQ': 'Urumqi Air',
+                'GT': 'Air Guilin',
+                'DR': 'Ruili Airlines',
+                'QW': 'Qingdao Airlines',
+                'BK': 'Okay Airways',
+                'HO': 'Juneyao Airlines',
+                '9C': 'Spring Airlines',
+                'FM': 'Shanghai Airlines',
+                'ZH': 'Shenzhen Airlines',
+                'SC': 'Shandong Airlines',
+                'GJ': 'Loong Air',
+                'RY': 'Jiangxi Air',
+                'QW': 'Qingdao Airlines',
+                'BK': 'Okay Airways',
+                'HO': 'Juneyao Airlines',
+                '9C': 'Spring Airlines',
+                'FM': 'Shanghai Airlines',
+                'ZH': 'Shenzhen Airlines',
+                'SC': 'Shandong Airlines',
+                'GJ': 'Loong Air',
+                'RY': 'Jiangxi Air'
+            }
+            
+            def get_airline_name(code):
+                """Get full airline name from code"""
+                return airline_names.get(code, code)
             # Step 1: Get access token
             token_url = "https://test.api.amadeus.com/v1/security/oauth2/token"
             headers = {"Content-Type": "application/x-www-form-urlencoded"}
@@ -799,9 +886,21 @@ class TravelAgent:
                         formatted_date = 'N/A'
                     inbound_route.append(f"{departure.get('iataCode', 'N/A')} → {arrival.get('iataCode', 'N/A')} ({airline} {flight_number}, {formatted_date})")
                 
-                result += f"{i}. Outbound: {' → '.join(outbound_route)}\n"
+                # Get airline name and flight number for the first outbound segment
+                first_outbound = outbound_segments[0] if outbound_segments else {}
+                outbound_airline_code = first_outbound.get('carrierCode', 'N/A')
+                outbound_airline_name = get_airline_name(outbound_airline_code)
+                outbound_flight = first_outbound.get('flightNumber') or first_outbound.get('number', 'N/A')
+                
+                # Get airline name and flight number for the first inbound segment
+                first_inbound = inbound_segments[0] if inbound_segments else {}
+                inbound_airline_code = first_inbound.get('carrierCode', 'N/A')
+                inbound_airline_name = get_airline_name(inbound_airline_code)
+                inbound_flight = first_inbound.get('flightNumber') or first_inbound.get('number', 'N/A')
+                
+                result += f"{outbound_airline_name} ({outbound_airline_code} {outbound_flight}) Outbound: {' → '.join(outbound_route)}\n"
                 if inbound_route:
-                    result += f"   Return: {' → '.join(inbound_route)}\n"
+                    result += f"\n   {inbound_airline_name} ({inbound_airline_code} {inbound_flight}) Return: {' → '.join(inbound_route)}\n"
                 result += f"   Total Price: {price} {currency}\n\n"
             return result
         
