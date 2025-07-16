@@ -5,7 +5,6 @@ from langchain_openai import ChatOpenAI
 from langchain.tools import tool
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.schema import BaseMessage
-from langchain_core.runnables import Runnable
 from dotenv import load_dotenv
 import requests
 import json
@@ -38,34 +37,34 @@ class TravelAgent:
     def _create_tools(self) -> List:
         """Create tools for the travel agent"""
         
-        @tool
-        def search_flights(origin: str, destination: str, date: str, passengers: int = 1) -> str:
-            """Search for available flights between two cities on a specific date.
-            
-            Args:
-                origin: Departure city (e.g., 'New York', 'London')
-                destination: Arrival city (e.g., 'Paris', 'Tokyo')
-                date: Travel date in YYYY-MM-DD format
-                passengers: Number of passengers (default: 1)
-            
-            Returns:
-                String with flight options and prices
-            """
-            # Simulate flight search - in a real app, this would call a flight API
-            flights = [
-                {"airline": "Delta Airlines", "flight_number": "DL123", "departure": "08:00", "arrival": "11:30", "price": 450, "duration": "3h 30m"},
-                {"airline": "American Airlines", "flight_number": "AA456", "departure": "14:15", "arrival": "17:45", "price": 380, "duration": "3h 30m"},
-                {"airline": "United Airlines", "flight_number": "UA789", "departure": "20:30", "arrival": "23:45", "price": 520, "duration": "3h 15m"},
-                {"airline": "British Airways", "flight_number": "BA321", "departure": "10:00", "arrival": "13:20", "price": 410, "duration": "3h 20m"},
-                {"airline": "Air France", "flight_number": "AF654", "departure": "16:45", "arrival": "20:05", "price": 470, "duration": "3h 20m"},
-                {"airline": "Lufthansa", "flight_number": "LH987", "departure": "06:30", "arrival": "09:50", "price": 395, "duration": "3h 20m"}
-            ]
-            result = f"Found {len(flights)} flights from {origin} to {destination} on {date}:\n\n"
-            for i, flight in enumerate(flights, 1):
-                result += f"{i}. {flight['airline']} {flight['flight_number']}\n"
-                result += f"   Departure: {flight['departure']} | Arrival: {flight['arrival']}\n"
-                result += f"   Duration: {flight['duration']} | Price: ${flight['price']}\n\n"
-            return result
+        # @tool
+        # def search_flights(origin: str, destination: str, date: str, passengers: int = 1) -> str:
+        #     """Search for available flights between two cities on a specific date.
+        #     
+        #     Args:
+        #         origin: Departure city (e.g., 'New York', 'London')
+        #         destination: Arrival city (e.g., 'Paris', 'Tokyo')
+        #         date: Travel date in YYYY-MM-DD format
+        #         passengers: Number of passengers (default: 1)
+        #     
+        #     Returns:
+        #         String with flight options and prices
+        #     """
+        #     # Simulate flight search - in a real app, this would call a flight API
+        #     flights = [
+        #         {"airline": "Delta Airlines", "flight_number": "DL123", "departure": "08:00", "arrival": "11:30", "price": 450, "duration": "3h 30m"},
+        #         {"airline": "American Airlines", "flight_number": "AA456", "departure": "14:15", "arrival": "17:45", "price": 380, "duration": "3h 30m"},
+        #         {"airline": "United Airlines", "flight_number": "UA789", "departure": "20:30", "arrival": "23:45", "price": 520, "duration": "3h 15m"},
+        #         {"airline": "British Airways", "flight_number": "BA321", "departure": "10:00", "arrival": "13:20", "price": 410, "duration": "3h 20m"},
+        #         {"airline": "Air France", "flight_number": "AF654", "departure": "16:45", "arrival": "20:05", "price": 470, "duration": "3h 20m"},
+        #         {"airline": "Lufthansa", "flight_number": "LH987", "departure": "06:30", "arrival": "09:50", "price": 395, "duration": "3h 20m"}
+        #     ]
+        #     result = f"Found {len(flights)} flights from {origin} to {destination} on {date}:\n\n"
+        #     for i, flight in enumerate(flights, 1):
+        #         result += f"{i}. {flight['airline']} {flight['flight_number']}\n"
+        #         result += f"   Departure: {flight['departure']} | Arrival: {flight['arrival']}\n"
+        #         result += f"   Duration: {flight['duration']} | Price: ${flight['price']}\n\n"
+        #     return result
 
         @tool
         def search_hotels(city: str, check_in: str, check_out: str, guests: int = 2) -> str:
@@ -109,6 +108,8 @@ class TravelAgent:
             Returns:
                 String with weather information
             """
+            if not city or not isinstance(city, str):
+                return "Please provide a valid city name as a string."
             import requests
             import os
             from datetime import datetime
@@ -131,16 +132,20 @@ class TravelAgent:
             if forecast_resp.status_code != 200:
                 return f"API error: {forecast_resp.status_code} - {forecast_resp.text}"
             forecast_data = forecast_resp.json()
-            # Find the forecast closest to the requested date (or the next available if not specified)
             forecasts = forecast_data.get("list", [])
             if not forecasts:
                 return f"No forecast data available for {city}."
-            # If date is provided, find the closest forecast
+            # Date validation and selection
+            now = datetime.now()
             if date:
                 try:
                     target_date = datetime.strptime(date, "%Y-%m-%d")
                 except Exception:
                     return "Invalid date format. Please use YYYY-MM-DD."
+                if target_date.date() < now.date():
+                    today_str = now.strftime('%Y-%m-%d')
+                    return (f"Sorry, I can only provide weather forecasts for today or future dates. "
+                            f"Please enter a valid date (today or later). For example, try: {today_str}.")
                 # Find the forecast closest to the target date
                 closest = min(forecasts, key=lambda f: abs(datetime.strptime(f["dt_txt"], "%Y-%m-%d %H:%M:%S") - target_date))
             else:
@@ -206,7 +211,108 @@ class TravelAgent:
             
             return result
         
-        return [search_flights, search_hotels, get_weather_forecast, get_travel_recommendations]
+        @tool
+        def search_flights_amadeus(origin: str, destination: str, departure_date: str, return_date: str, adults: int = 1, currency: str = "USD") -> str:
+            """Search for round-trip flights using Amadeus API.
+            Args:
+                origin: IATA code of departure airport (e.g., 'JFK')
+                destination: IATA code of destination airport (e.g., 'LHR')
+                departure_date: Outbound flight date (YYYY-MM-DD)
+                return_date: Return flight date (YYYY-MM-DD)
+                adults: Number of adult travelers
+                currency: Preferred currency (default: USD)
+            Returns:
+                String summary of flight offers
+            """
+            import os
+            import requests
+            # Step 1: Get access token
+            token_url = "https://test.api.amadeus.com/v1/security/oauth2/token"
+            headers = {"Content-Type": "application/x-www-form-urlencoded"}
+            data = {
+                "grant_type": "client_credentials",
+                "client_id": os.getenv("AMADEUS_CLIENT_ID"),
+                "client_secret": os.getenv("AMADEUS_CLIENT_SECRET"),
+            }
+            token_resp = requests.post(token_url, headers=headers, data=data)
+            if token_resp.status_code != 200:
+                return f"Failed to get Amadeus access token: {token_resp.text}"
+            access_token = token_resp.json().get("access_token")
+            if not access_token:
+                return "No access token received from Amadeus."
+            # Step 2: Search for flight offers
+            search_url = "https://test.api.amadeus.com/v2/shopping/flight-offers"
+            params = {
+                "originLocationCode": origin,
+                "destinationLocationCode": destination,
+                "departureDate": departure_date,
+                "returnDate": return_date,
+                "adults": adults,
+                "currencyCode": currency,
+                "max": 5
+            }
+            search_headers = {"Authorization": f"Bearer {access_token}"}
+            search_resp = requests.get(search_url, headers=search_headers, params=params)
+            if search_resp.status_code != 200:
+                return f"Failed to get flight offers: {search_resp.text}"
+            offers = search_resp.json().get("data", [])
+            if not offers:
+                return "No flight offers found. Try different dates or airports."
+            # Summarize offers
+            result = f"Found {len(offers)} round-trip flight offers from {origin} to {destination} (currency: {currency}):\n\n"
+            for i, offer in enumerate(offers, 1):
+                price = offer["price"]["total"]
+                itineraries = offer["itineraries"]
+                outbound_segments = itineraries[0]["segments"]
+                inbound_segments = itineraries[1]["segments"] if len(itineraries) > 1 else []
+                
+                # Build outbound route (all segments)
+                outbound_route = []
+                for segment in outbound_segments:
+                    departure = segment.get('departure', {})
+                    arrival = segment.get('arrival', {})
+                    airline = segment.get('carrierCode', 'N/A')
+                    flight_number = segment.get('flightNumber') or segment.get('number', 'N/A')
+                    # Format the departure date
+                    departure_date = departure.get('at', 'N/A')
+                    if departure_date != 'N/A':
+                        try:
+                            from datetime import datetime
+                            date_obj = datetime.fromisoformat(departure_date.replace('Z', '+00:00'))
+                            formatted_date = date_obj.strftime('%b %d')
+                        except:
+                            formatted_date = 'N/A'
+                    else:
+                        formatted_date = 'N/A'
+                    outbound_route.append(f"{departure.get('iataCode', 'N/A')} → {arrival.get('iataCode', 'N/A')} ({airline} {flight_number}, {formatted_date})")
+                
+                # Build inbound route (all segments)
+                inbound_route = []
+                for segment in inbound_segments:
+                    departure = segment.get('departure', {})
+                    arrival = segment.get('arrival', {})
+                    airline = segment.get('carrierCode', 'N/A')
+                    flight_number = segment.get('flightNumber') or segment.get('number', 'N/A')
+                    # Format the departure date
+                    departure_date = departure.get('at', 'N/A')
+                    if departure_date != 'N/A':
+                        try:
+                            from datetime import datetime
+                            date_obj = datetime.fromisoformat(departure_date.replace('Z', '+00:00'))
+                            formatted_date = date_obj.strftime('%b %d')
+                        except:
+                            formatted_date = 'N/A'
+                    else:
+                        formatted_date = 'N/A'
+                    inbound_route.append(f"{departure.get('iataCode', 'N/A')} → {arrival.get('iataCode', 'N/A')} ({airline} {flight_number}, {formatted_date})")
+                
+                result += f"{i}. Outbound: {' → '.join(outbound_route)}\n"
+                if inbound_route:
+                    result += f"   Return: {' → '.join(inbound_route)}\n"
+                result += f"   Total Price: {price} {currency}\n\n"
+            return result
+        
+        return [search_hotels, get_weather_forecast, get_travel_recommendations, search_flights_amadeus]
     
     def _create_agent(self):
         """Create the agent with prompt template"""
