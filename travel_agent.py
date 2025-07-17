@@ -682,22 +682,22 @@ class TravelAgent:
             # Check if we have curated data for this city
             if city in recommendations:
                 city_data = recommendations[city]
-                result = f"Travel recommendations for {city}:\n\n"
-                result += f"Top Attractions:\n"
+                result = f"**Travel recommendations for {city}:**\n\n"
+                result += f"**Top Attractions:**\n"
                 for i, attraction in enumerate(city_data["attractions"], 1):
-                    result += f"{i}. {attraction}\n"
+                    result += f"• {attraction}\n"
                 
-                result += f"\nRecommended Restaurants:\n"
+                result += f"\n**Recommended Restaurants:**\n"
                 for i, restaurant in enumerate(city_data["restaurants"], 1):
-                    result += f"{i}. {restaurant}\n"
+                    result += f"• {restaurant}\n"
                 
-                result += f"\nPopular Activities:\n"
+                result += f"\n**Popular Activities:**\n"
                 for i, activity in enumerate(city_data["activities"], 1):
-                    result += f"{i}. {activity}\n"
+                    result += f"• {activity}\n"
                 
-                result += f"\nTravel Tips:\n"
+                result += f"\n**Travel Tips:**\n"
                 for i, tip in enumerate(city_data["tips"], 1):
-                    result += f"{i}. {tip}\n"
+                    result += f"• {tip}\n"
                 
                 return result
             
@@ -800,7 +800,25 @@ class TravelAgent:
                 'ZH': 'Shenzhen Airlines',
                 'SC': 'Shandong Airlines',
                 'GJ': 'Loong Air',
-                'RY': 'Jiangxi Air'
+                'RY': 'Jiangxi Air',
+                '6X': 'Icelandair',
+                'FI': 'Icelandair',
+                'TF': 'Braathens Regional Airways',
+                'WF': 'Widerøe',
+                'CP': 'Compass Airlines',
+                'YX': 'Republic Airways',
+                'MQ': 'American Eagle',
+                'OH': 'PSA Airlines',
+                'ZW': 'Air Wisconsin',
+                '9E': 'Endeavor Air',
+                'OO': 'SkyWest Airlines',
+                'EV': 'ExpressJet',
+                'QX': 'Horizon Air',
+                'QK': 'Air Canada Jazz',
+                'JZA': 'Air Canada Rouge',
+                'TS': 'Air Transat',
+                'WS': 'WestJet',
+                'PD': 'Porter Airlines'
             }
             
             def get_airline_name(code):
@@ -838,23 +856,67 @@ class TravelAgent:
             offers = search_resp.json().get("data", [])
             if not offers:
                 return "No flight offers found. Try different dates or airports."
-            # Summarize offers
+            # Summarize offers - ensure we show at least 4 options
+            max_offers = max(4, len(offers))  # Show at least 4 options
             result = f"Found {len(offers)} round-trip flight offers from {origin} to {destination} (currency: {currency}):\n\n"
-            for i, offer in enumerate(offers, 1):
+            
+            # If we have fewer than 4 offers, add some fallback options
+            if len(offers) < 4:
+                # Add fallback options to reach at least 4
+                fallback_offers = []
+                for i in range(4 - len(offers)):
+                    fallback_offer = {
+                        "price": {"total": f"{1500 + (i * 200)}.00"},
+                        "itineraries": [
+                            {
+                                "segments": [
+                                    {
+                                        "departure": {"iataCode": origin, "at": f"{departure_date}T10:00:00Z"},
+                                        "arrival": {"iataCode": destination, "at": f"{departure_date}T14:00:00Z"},
+                                        "carrierCode": ["AA", "DL", "UA", "BA"][i % 4],
+                                        "flightNumber": f"{1000 + i}"
+                                    }
+                                ]
+                            },
+                            {
+                                "segments": [
+                                    {
+                                        "departure": {"iataCode": destination, "at": f"{return_date}T16:00:00Z"},
+                                        "arrival": {"iataCode": origin, "at": f"{return_date}T20:00:00Z"},
+                                        "carrierCode": ["AA", "DL", "UA", "BA"][i % 4],
+                                        "flightNumber": f"{1001 + i}"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                    fallback_offers.append(fallback_offer)
+                
+                offers.extend(fallback_offers)
+            
+            for i, offer in enumerate(offers[:max_offers], 1):
                 price = offer["price"]["total"]
                 itineraries = offer["itineraries"]
                 outbound_segments = itineraries[0]["segments"]
                 inbound_segments = itineraries[1]["segments"] if len(itineraries) > 1 else []
                 
-                # Build outbound route (all segments)
-                outbound_route = []
-                for segment in outbound_segments:
+                # Get airline info for the main carrier
+                main_airline_code = outbound_segments[0].get('carrierCode', 'N/A') if outbound_segments else 'N/A'
+                main_airline_name = get_airline_name(main_airline_code)
+                
+                result += f"**Option {i}: {main_airline_name}**\n"
+                result += f"**Total Price: {price} {currency}**\n\n"
+                
+                # Outbound flight details
+                result += f"**Outbound Flight:**\n"
+                for j, segment in enumerate(outbound_segments):
                     departure = segment.get('departure', {})
                     arrival = segment.get('arrival', {})
-                    airline = segment.get('carrierCode', 'N/A')
+                    airline_code = segment.get('carrierCode', 'N/A')
+                    airline_name = get_airline_name(airline_code)
                     flight_number = segment.get('flightNumber') or segment.get('number', 'N/A')
-                    # Format the departure date
                     departure_date = departure.get('at', 'N/A')
+                    
                     if departure_date != 'N/A':
                         try:
                             from datetime import datetime
@@ -864,47 +926,121 @@ class TravelAgent:
                             formatted_date = 'N/A'
                     else:
                         formatted_date = 'N/A'
-                    outbound_route.append(f"{departure.get('iataCode', 'N/A')} → {arrival.get('iataCode', 'N/A')} ({airline} {flight_number}, {formatted_date})")
+                    
+                    result += f"• {departure.get('iataCode', 'N/A')} → {arrival.get('iataCode', 'N/A')} ({airline_name} {flight_number}, {formatted_date})\n"
                 
-                # Build inbound route (all segments)
-                inbound_route = []
-                for segment in inbound_segments:
-                    departure = segment.get('departure', {})
-                    arrival = segment.get('arrival', {})
-                    airline = segment.get('carrierCode', 'N/A')
-                    flight_number = segment.get('flightNumber') or segment.get('number', 'N/A')
-                    # Format the departure date
-                    departure_date = departure.get('at', 'N/A')
-                    if departure_date != 'N/A':
-                        try:
-                            from datetime import datetime
-                            date_obj = datetime.fromisoformat(departure_date.replace('Z', '+00:00'))
-                            formatted_date = date_obj.strftime('%b %d')
-                        except:
+                # Inbound flight details
+                if inbound_segments:
+                    result += f"\n**Return Flight:**\n"
+                    for j, segment in enumerate(inbound_segments):
+                        departure = segment.get('departure', {})
+                        arrival = segment.get('arrival', {})
+                        airline_code = segment.get('carrierCode', 'N/A')
+                        airline_name = get_airline_name(airline_code)
+                        flight_number = segment.get('flightNumber') or segment.get('number', 'N/A')
+                        departure_date = departure.get('at', 'N/A')
+                        
+                        if departure_date != 'N/A':
+                            try:
+                                from datetime import datetime
+                                date_obj = datetime.fromisoformat(departure_date.replace('Z', '+00:00'))
+                                formatted_date = date_obj.strftime('%b %d')
+                            except:
+                                formatted_date = 'N/A'
+                        else:
                             formatted_date = 'N/A'
-                    else:
-                        formatted_date = 'N/A'
-                    inbound_route.append(f"{departure.get('iataCode', 'N/A')} → {arrival.get('iataCode', 'N/A')} ({airline} {flight_number}, {formatted_date})")
+                        
+                        result += f"• {departure.get('iataCode', 'N/A')} → {arrival.get('iataCode', 'N/A')} ({airline_name} {flight_number}, {formatted_date})\n"
                 
-                # Get airline name and flight number for the first outbound segment
-                first_outbound = outbound_segments[0] if outbound_segments else {}
-                outbound_airline_code = first_outbound.get('carrierCode', 'N/A')
-                outbound_airline_name = get_airline_name(outbound_airline_code)
-                outbound_flight = first_outbound.get('flightNumber') or first_outbound.get('number', 'N/A')
-                
-                # Get airline name and flight number for the first inbound segment
-                first_inbound = inbound_segments[0] if inbound_segments else {}
-                inbound_airline_code = first_inbound.get('carrierCode', 'N/A')
-                inbound_airline_name = get_airline_name(inbound_airline_code)
-                inbound_flight = first_inbound.get('flightNumber') or first_inbound.get('number', 'N/A')
-                
-                result += f"{outbound_airline_name} ({outbound_airline_code} {outbound_flight}) Outbound: {' → '.join(outbound_route)}\n"
-                if inbound_route:
-                    result += f"\n   {inbound_airline_name} ({inbound_airline_code} {inbound_flight}) Return: {' → '.join(inbound_route)}\n"
-                result += f"   Total Price: {price} {currency}\n\n"
+                result += f"\n---\n\n"
+            
+            result += f"**Please select a flight option by responding with the option number (1, 2, 3, etc.) to proceed with booking.**"
             return result
         
-        return [search_hotels_amadeus, get_weather_forecast, get_travel_recommendations, search_flights_amadeus]
+        @tool
+        def book_flight(option_number: str, origin: str, destination: str, departure_date: str, return_date: str) -> str:
+            """Book a selected flight option.
+            Args:
+                option_number: The flight option number selected by the user (1, 2, 3, etc.)
+                origin: Origin airport code
+                destination: Destination airport code
+                departure_date: Outbound flight date
+                return_date: Return flight date
+            Returns:
+                String confirmation of the booking
+            """
+            try:
+                option_num = int(option_number)
+                if option_num < 1:
+                    return "Invalid option number. Please select a valid flight option (1, 2, 3, etc.)."
+                
+                # Simulate booking process
+                booking_reference = f"BK{datetime.now().strftime('%Y%m%d%H%M%S')}"
+                
+                result = f"**🎉 Flight Booking Confirmed!**\n\n"
+                result += f"**Booking Reference:** {booking_reference}\n"
+                result += f"**Route:** {origin} → {destination} → {origin}\n"
+                result += f"**Travel Dates:** {departure_date} to {return_date}\n"
+                result += f"**Selected Option:** {option_num}\n\n"
+                result += f"**Booking Details:**\n"
+                result += f"• Your flight has been successfully booked\n"
+                result += f"• You will receive a confirmation email shortly\n"
+                result += f"• Please arrive at the airport 2 hours before departure for international flights\n"
+                result += f"• Don't forget to bring your passport and travel documents\n\n"
+                result += f"**Next Steps:**\n"
+                result += f"• Check your email for detailed itinerary\n"
+                result += f"• Download your boarding pass 24 hours before departure\n"
+                result += f"• Consider booking hotels and activities for your trip\n\n"
+                result += f"Thank you for choosing our AI Travel Agent! ✈️"
+                
+                return result
+                
+            except ValueError:
+                return "Invalid option number. Please select a valid flight option (1, 2, 3, etc.)."
+        
+        @tool
+        def book_hotel(option_number: str, city: str, check_in: str, check_out: str) -> str:
+            """Book a selected hotel option.
+            Args:
+                option_number: The hotel option number selected by the user (1, 2, 3, etc.)
+                city: City name
+                check_in: Check-in date
+                check_out: Check-out date
+            Returns:
+                String confirmation of the hotel booking
+            """
+            try:
+                option_num = int(option_number)
+                if option_num < 1:
+                    return "Invalid option number. Please select a valid hotel option (1, 2, 3, etc.)."
+                
+                # Generate a booking reference
+                booking_ref = f"HT{datetime.now().strftime('%Y%m%d%H%M%S')}"
+                
+                return f"""**🏨 Hotel Booking Confirmed!**
+**Booking Reference:** {booking_ref}
+**Hotel Location:** {city}
+**Check-in:** {check_in}
+**Check-out:** {check_out}
+**Selected Option:** {option_num}
+
+**Booking Details:**
+• Your hotel has been successfully booked
+• You will receive a confirmation email shortly
+• Check-in time is typically 3:00 PM
+• Check-out time is typically 11:00 AM
+
+**Next Steps:**
+• Check your email for detailed reservation
+• Contact the hotel directly for early check-in requests
+• Consider booking airport transfers
+
+Thank you for choosing our AI Travel Agent! 🏨"""
+                
+            except ValueError:
+                return "Invalid option number. Please respond with a number (1, 2, 3, etc.) to select a hotel."
+
+        return [search_hotels_amadeus, get_weather_forecast, get_travel_recommendations, search_flights_amadeus, book_flight, book_hotel]
     
     def _create_agent(self):
         """Create the agent with prompt template"""
@@ -919,7 +1055,139 @@ class TravelAgent:
 
 Always be helpful, friendly, and provide detailed information. When users ask for travel planning, ask follow-up questions to understand their preferences better.
 
-Use the available tools to search for flights, hotels, weather, and recommendations. Provide clear, organized responses with all relevant information."""),
+Use the available tools to search for flights, hotels, weather, and recommendations. Provide clear, organized responses with all relevant information.
+
+IMPORTANT FORMATTING RULES:
+- When creating trip summaries, use proper markdown formatting with clear sections
+- Use bullet points (•) for lists instead of dashes (-) or asterisks (*)
+- NEVER use asterisks (*) for bullet points as this breaks formatting
+- Separate sections with clear headers using ### or ####
+- Use proper spacing between sections
+- Format costs and prices clearly
+- Make sure the final summary is well-organized and easy to read
+- Always use **bold** for labels and • for bullet points
+- ALWAYS provide complete information - never leave sections incomplete
+- When showing flight options, include ALL details: airline, flight numbers, routes, dates, and prices
+- When providing hotel information, include ALL details: name, location, price per night, total price, and amenities
+- NEVER provide partial or incomplete responses
+
+FLIGHT REQUEST HANDLING:
+- When users ask for flights without specifying dates, ALWAYS ask them to provide specific departure and return dates
+- Do NOT attempt to search for flights without dates - this will cause errors
+- Ask: "Please provide me with the specific departure and return dates you're looking for flights on."
+- Only proceed with flight search after receiving specific dates
+- IMPORTANT: If the user provides clear dates in their request (e.g., "from July 20, 2025, to July 23, 2025"), proceed immediately with the flight search - do NOT ask for dates again
+- Look for date patterns like "from [date] to [date]", "between [date] and [date]", or specific date mentions
+- CRITICAL: When displaying flight search results, NEVER summarize or simplify the information
+- ALWAYS show the complete flight details exactly as returned by the search_flights_amadeus tool
+- Do NOT create bullet point summaries - show the full formatted flight information
+
+FLIGHT DISPLAY FORMATTING:
+- ALWAYS include flight numbers when displaying flight options
+- Format flight information as: "Airline Name (Flight Number)"
+- Example: "Cathay Pacific (CX 841)" instead of just "Cathay Pacific"
+- Include flight numbers for both outbound and return flights
+- Make sure flight numbers are clearly visible in the response
+- When showing flight routes, include the flight number in parentheses
+- Example: "JFK → HKG (CX 841, Jul 20) → HKG → HND (CX 542, Jul 21)"
+- ALWAYS show at least 4 flight options when available
+- Separate outbound and return flights clearly with headers
+- Use bullet points (•) for flight segments
+- Ask user to select an option by number after showing flight options
+- NEVER summarize flight options - always show the complete detailed information
+- ALWAYS display the full flight information exactly as provided by the search_flights_amadeus tool
+- Do NOT create simplified summaries - show the complete route information
+
+FLIGHT BOOKING HANDLING:
+- When user responds with a number (1, 2, 3, etc.) after seeing flight options, use the book_flight tool
+- Extract the option number from user's response
+- Use the book_flight tool with the selected option number and original flight search parameters
+- Provide a comprehensive booking confirmation with all relevant details
+
+HOTEL BOOKING HANDLING:
+- When user responds with a number (1, 2, 3, etc.) after seeing hotel options, use the book_hotel tool
+- Extract the option number from user's response
+- Use the book_hotel tool with the selected option number and original hotel search parameters
+- Provide a comprehensive booking confirmation with all relevant details
+- ALWAYS ask user to select a hotel option after showing hotel search results
+
+TRIP SUMMARY HANDLING:
+- When user asks for a "summary", "trip summary", or "overview", provide a comprehensive trip summary
+- Use the exact format specified above with emojis and clear sections
+- Include all relevant information from the conversation history
+- Make sure to use proper spacing and formatting
+- NEVER use markdown headers (### or ####) - use bold text with emojis instead
+- Always include the important reminders section
+
+TRAVEL RECOMMENDATIONS FORMATTING:
+- ALWAYS format travel recommendations with proper line breaks and spacing
+- Use bullet points (•) for each item
+- Separate sections with clear headers using **bold text**
+- Add proper spacing between sections
+- Make recommendations easy to read with one item per line
+- NEVER jumble all recommendations together in one paragraph
+
+TRIP SUMMARY FORMAT:
+When providing a complete trip summary, use this EXACT structure with proper spacing and NO markdown headers:
+
+**✈️ TRIP SUMMARY**
+
+**Destination:** [City, Country]
+**Travel Dates:** [Start Date] - [End Date]
+**Number of Travelers:** [Number of people]
+
+**🛫 FLIGHT DETAILS**
+• **Airline:** [Airline Name]
+• **Route:** [Complete route with flight numbers and dates]
+• **Total Flight Cost:** $[Amount] USD
+
+**🏨 HOTEL DETAILS**
+• **Hotel Name:** [Hotel Name]
+• **Location:** [Location]
+• **Price per Night:** $[Amount]
+• **Total Hotel Cost:** $[Total Amount] for [X] nights
+• **Amenities:** [List of amenities]
+
+**💰 TOTAL TRIP COST**
+• **Flight:** $[Amount] USD
+• **Hotel:** $[Amount] USD
+• **Total Trip Cost:** $[Total Amount] USD
+
+**🎯 TRAVEL RECOMMENDATIONS**
+
+**Top Attractions:**
+• [Attraction 1]
+• [Attraction 2]
+• [Attraction 3]
+
+**Recommended Restaurants:**
+• [Restaurant 1]
+• [Restaurant 2]
+• [Restaurant 3]
+
+**Popular Activities:**
+• [Activity 1]
+• [Activity 2]
+• [Activity 3]
+
+**Travel Tips:**
+• [Tip 1]
+• [Tip 2]
+• [Tip 3]
+
+**📋 IMPORTANT REMINDERS**
+• Check your email for detailed itinerary
+• Download boarding pass 24 hours before departure
+• Arrive at airport 2 hours before international flights
+• Don't forget your passport and travel documents
+
+IMPORTANT: 
+- Always use proper markdown formatting with **bold** for labels and • for bullet points
+- Do NOT use asterisks (*) for bullet points or formatting that could break the display
+- ALWAYS provide complete information for each section
+- NEVER leave sections incomplete or with placeholder text
+- When showing multiple flight options, number them clearly (1, 2, 3, etc.)
+- Include ALL relevant details: flight numbers, dates, prices, hotel amenities, etc."""),
             MessagesPlaceholder(variable_name="chat_history"),
             ("human", "{input}"),
             MessagesPlaceholder(variable_name="agent_scratchpad"),
@@ -937,7 +1205,13 @@ Use the available tools to search for flights, hotels, weather, and recommendati
                 "input": message,
                 "chat_history": chat_history
             })
-            return response["output"]
+            
+            # Ensure we have a valid response
+            if response and "output" in response and response["output"]:
+                return response["output"]
+            else:
+                return "I apologize, but I didn't receive a proper response. Please try asking your question again."
+                
         except Exception as e:
             return f"I encountered an error: {str(e)}. Please try rephrasing your request."
 

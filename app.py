@@ -516,7 +516,7 @@ def main():
         
         st.markdown("---")
         
-        # Clear chat button
+                # Clear chat button
         if st.button("🗑️ Clear Chat"):
             st.session_state.messages = []
             st.session_state.chat_history = []
@@ -533,72 +533,7 @@ def main():
             else:
                 display_chat_message(message["content"], is_user=False)
 
-        # Stepwise trip planning logic
-        if st.session_state.agent:
-            # If no planning step, look for a trip planning request
-            if st.session_state.planning_step is None:
-                trip_msgs = [m for m in st.session_state.messages if m["role"] == "user" and 'plan' in m["content"].lower() and 'trip' in m["content"].lower()]
-                if trip_msgs and not any(m["role"] == "assistant" and 'Found' in m["content"] for m in st.session_state.messages):
-                    st.session_state.planning_step = 'awaiting_flight_selection'
-                    # Extract details from user message (for demo, just use placeholders or parse if possible)
-                    user_message = trip_msgs[-1]["content"]
-                    # For now, ask for flights only
-                    flight_prompt = user_message + "\n\nPlease show me ONLY available flight options for this trip. Do NOT include hotels, weather, or any other information."
-                    with st.spinner("AI Travel Agent is searching for flights..."):
-                        response = st.session_state.agent.chat(flight_prompt, st.session_state.chat_history)
-                    options = []
-                    lines = response.split("\n")
-                    for line in lines:
-                        if line.strip().startswith(tuple(str(i) for i in range(1, 10))):
-                            option = line.strip()
-                            if option:
-                                options.append(option)
-                    st.session_state.flight_options = options
-                    st.session_state.messages.append({"role": "assistant", "content": response})
-                    st.rerun()
-            # Awaiting flight selection
-            elif st.session_state.planning_step == 'awaiting_flight_selection':
-                if st.session_state.flight_options:
-                    selected = st.radio("Select a flight option:", st.session_state.flight_options, key="flight_select")
-                    if st.button("Confirm Flight Selection"):
-                        st.session_state.selected_flight = selected
-                        ack_msg = f"Great choice! You selected: {selected}. Now, let's find you a hotel."
-                        st.session_state.messages.append({"role": "assistant", "content": ack_msg})
-                        st.session_state.planning_step = 'awaiting_hotel_selection'
-                        # For now, ask for hotels only
-                        hotel_prompt = f"I have selected this flight: {selected}. Now show me ONLY hotel options for my destination and dates. Do NOT include flights, weather, or any other information."
-                        with st.spinner("AI Travel Agent is searching for hotels..."):
-                            response = st.session_state.agent.chat(hotel_prompt, st.session_state.chat_history)
-                        options = []
-                        lines = response.split("\n")
-                        for line in lines:
-                            if line.strip().startswith(tuple(str(i) for i in range(1, 10))):
-                                option = line.strip()
-                                if option:
-                                    options.append(option)
-                        st.session_state.hotel_options = options
-                        st.session_state.messages.append({"role": "assistant", "content": response})
-                        summary = f"**Your Trip So Far:**\n- Flight: {selected}"
-                        st.session_state.messages.append({"role": "assistant", "content": summary})
-                        st.rerun()
-            # Awaiting hotel selection
-            elif st.session_state.planning_step == 'awaiting_hotel_selection':
-                if st.session_state.hotel_options:
-                    selected = st.radio("Select a hotel option:", st.session_state.hotel_options, key="hotel_select")
-                    if st.button("Confirm Hotel Selection"):
-                        st.session_state.selected_hotel = selected
-                        ack_msg = f"Excellent! You chose: {selected}. Let me summarize your trip and share some cultural suggestions."
-                        st.session_state.messages.append({"role": "assistant", "content": ack_msg})
-                        st.session_state.planning_step = 'completed'
-                        summary = f"**Your Trip So Far:**\n- Flight: {st.session_state.selected_flight}\n- Hotel: {selected}"
-                        st.session_state.messages.append({"role": "assistant", "content": summary})
-                        # Generate cultural suggestions and a bonus recommendation
-                        destination = 'your destination city'  # Optionally, parse from previous messages
-                        cultural_suggestions = f"**Cultural Suggestions for {destination.title()}:**\n- Visit the local art museum.\n- Try a traditional food market.\n- Attend a live music or dance performance."
-                        bonus = f"**Bonus Recommendation:**\nDon't miss the hidden rooftop café near the city center for amazing sunset views!"
-                        itinerary = f"**Your Complete Trip Itinerary:**\n- Flight: {st.session_state.selected_flight}\n- Hotel: {selected}\n\n{cultural_suggestions}\n\n{bonus}"
-                        st.session_state.messages.append({"role": "assistant", "content": itinerary})
-                        st.rerun()
+
         
         # Chat input with better styling
         if st.session_state.agent:
@@ -628,6 +563,10 @@ def main():
                                 user_input, 
                                 st.session_state.chat_history
                             )
+                            
+                            # Debug: Check if response is empty or too short
+                            if not response or len(response.strip()) < 10:
+                                response = "I apologize, but I didn't receive a proper response. Please try asking your question again."
                             
                             # Add AI response to chat
                             st.session_state.messages.append({"role": "assistant", "content": response})
