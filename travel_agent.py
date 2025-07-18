@@ -597,25 +597,25 @@ class TravelAgent:
                     
                     # Add categorized recommendations
                     if attractions:
-                        result += "Top Attractions:\n"
+                        result += "Top Attractions\n"
                         for i, attraction in enumerate(attractions[:5], 1):
                             result += f"{i}. {attraction}\n"
                         result += "\n"
                     
                     if restaurants:
-                        result += "Recommended Restaurants:\n"
+                        result += "Recommended Restaurants\n"
                         for i, restaurant in enumerate(restaurants[:3], 1):
                             result += f"{i}. {restaurant}\n"
                         result += "\n"
                     
                     if activities:
-                        result += "Popular Activities:\n"
+                        result += "Popular Activities\n"
                         for i, activity in enumerate(activities[:3], 1):
                             result += f"{i}. {activity}\n"
                         result += "\n"
                     
                     if tips:
-                        result += "Travel Tips:\n"
+                        result += "Travel Tips\n"
                         for i, tip in enumerate(tips[:3], 1):
                             result += f"{i}. {tip}\n"
                     
@@ -683,22 +683,18 @@ class TravelAgent:
             if city in recommendations:
                 city_data = recommendations[city]
                 result = f"**Travel recommendations for {city}:**\n\n"
-                result += f"**Top Attractions:**\n"
+                result += f"Top Attractions\n"
                 for i, attraction in enumerate(city_data["attractions"], 1):
-                    result += f"• {attraction}\n"
-                
-                result += f"\n**Recommended Restaurants:**\n"
+                    result += f"{i}. {attraction}\n"
+                result += f"\nRecommended Restaurants\n"
                 for i, restaurant in enumerate(city_data["restaurants"], 1):
-                    result += f"• {restaurant}\n"
-                
-                result += f"\n**Popular Activities:**\n"
+                    result += f"{i}. {restaurant}\n"
+                result += f"\nPopular Activities\n"
                 for i, activity in enumerate(city_data["activities"], 1):
-                    result += f"• {activity}\n"
-                
-                result += f"\n**Travel Tips:**\n"
+                    result += f"{i}. {activity}\n"
+                result += f"\nTravel Tips\n"
                 for i, tip in enumerate(city_data["tips"], 1):
-                    result += f"• {tip}\n"
-                
+                    result += f"{i}. {tip}\n"
                 return result
             
             # If no curated data and web search failed, provide a generic response
@@ -905,9 +901,7 @@ class TravelAgent:
                 main_airline_name = get_airline_name(main_airline_code)
                 
                 result += f"**Option {i}: {main_airline_name}**\n"
-                result += f"**Total Price: {price} {currency}**\n\n"
-                
-                # Outbound flight details
+                result += f"**Total Price: {price} {currency}**\n"
                 result += f"**Outbound Flight:**\n"
                 for j, segment in enumerate(outbound_segments):
                     departure = segment.get('departure', {})
@@ -931,7 +925,7 @@ class TravelAgent:
                 
                 # Inbound flight details
                 if inbound_segments:
-                    result += f"\n**Return Flight:**\n"
+                    result += f"**Return Flight:**\n"
                     for j, segment in enumerate(inbound_segments):
                         departure = segment.get('departure', {})
                         arrival = segment.get('arrival', {})
@@ -952,7 +946,7 @@ class TravelAgent:
                         
                         result += f"• {departure.get('iataCode', 'N/A')} → {arrival.get('iataCode', 'N/A')} ({airline_name} {flight_number}, {formatted_date})\n"
                 
-                result += f"\n---\n\n"
+                result += f"---\n"
             
             result += f"**Please select a flight option by responding with the option number (1, 2, 3, etc.) to proceed with booking.**"
             return result
@@ -1120,11 +1114,12 @@ TRIP SUMMARY HANDLING:
 - Always include the important reminders section
 
 TRAVEL RECOMMENDATIONS FORMATTING:
-- ALWAYS format travel recommendations with proper line breaks and spacing
-- Use bullet points (•) for each item
-- Separate sections with clear headers using **bold text**
-- Add proper spacing between sections
-- Make recommendations easy to read with one item per line
+- ALWAYS use the exact formatting returned by the get_travel_recommendations tool
+- Do NOT reformat or change the numbering system (1., 2., 3., etc.)
+- Do NOT convert numbered lists to bullet points
+- Keep the original formatting with numbered lists for each section
+- Maintain the exact structure: "Top Attractions", "Recommended Restaurants", "Popular Activities", "Travel Tips"
+- Each section should have numbered items (1., 2., 3., etc.) not bullet points
 - NEVER jumble all recommendations together in one paragraph
 
 TRIP SUMMARY FORMAT:

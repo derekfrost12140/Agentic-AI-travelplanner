@@ -413,13 +413,10 @@ def main():
     # Sidebar for configuration
     with st.sidebar:
         st.header("🔧 Configuration")
-        
         # Check if API key exists in environment
         env_api_key = os.getenv("OPENAI_API_KEY")
-        
         if env_api_key and env_api_key != "your_openai_api_key_here":
             st.success("✅ API key loaded from .env file!")
-            
             # Initialize agent if not already done
             if st.session_state.agent is None:
                 with st.spinner("Initializing AI Travel Agent..."):
@@ -433,30 +430,23 @@ def main():
                 help="Enter your OpenAI API key to use the travel agent",
                 placeholder="sk-..."
             )
-            
             if not api_key:
                 st.info("💡 **Get your API key from:** [OpenAI Platform](https://platform.openai.com/api-keys)")
                 st.info("💡 **Or add it to your .env file:** `OPENAI_API_KEY=your_key_here`")
             else:
                 st.success("✅ API key configured!")
                 os.environ["OPENAI_API_KEY"] = api_key
-                
                 # Initialize agent if not already done
                 if st.session_state.agent is None:
                     with st.spinner("Initializing AI Travel Agent..."):
                         st.session_state.agent = create_travel_agent()
-        
         st.markdown("---")
-        
         # Quick actions
         st.header("🚀 Quick Actions")
-        
         if st.button("Plan a Trip to Paris"):
             if st.session_state.agent:
                 user_message = "I want to plan a 5-day trip to Paris next month. Can you help me with flights, hotels, and activities?"
                 st.session_state.messages.append({"role": "user", "content": user_message})
-                
-                # Get AI response
                 with st.spinner("AI Travel Agent is thinking..."):
                     try:
                         response = st.session_state.agent.chat(user_message, st.session_state.chat_history)
@@ -471,13 +461,10 @@ def main():
                 st.rerun()
             else:
                 st.error("Please configure your OpenAI API key first")
-        
         if st.button("Find Flights to Tokyo"):
             if st.session_state.agent:
                 user_message = "I need to find flights from New York to Tokyo for next week. What are my options?"
                 st.session_state.messages.append({"role": "user", "content": user_message})
-                
-                # Get AI response
                 with st.spinner("AI Travel Agent is thinking..."):
                     try:
                         response = st.session_state.agent.chat(user_message, st.session_state.chat_history)
@@ -492,13 +479,10 @@ def main():
                 st.rerun()
             else:
                 st.error("Please configure your OpenAI API key first")
-        
         if st.button("Get Weather for New York"):
             if st.session_state.agent:
                 user_message = "What's the weather like in New York this weekend?"
                 st.session_state.messages.append({"role": "user", "content": user_message})
-                
-                # Get AI response
                 with st.spinner("AI Travel Agent is thinking..."):
                     try:
                         response = st.session_state.agent.chat(user_message, st.session_state.chat_history)
@@ -513,10 +497,7 @@ def main():
                 st.rerun()
             else:
                 st.error("Please configure your OpenAI API key first")
-        
         st.markdown("---")
-        
-                # Clear chat button
         if st.button("🗑️ Clear Chat"):
             st.session_state.messages = []
             st.session_state.chat_history = []
@@ -588,7 +569,7 @@ def main():
                 st.markdown("---")
                 download_itinerary_button(st.session_state.messages)
                 
-        elif env_api_key and env_api_key != "your_openai_api_key_here":
+        elif os.getenv("OPENAI_API_KEY") and os.getenv("OPENAI_API_KEY") != "your_openai_api_key_here":
             st.info("🔄 Initializing AI Travel Agent... Please wait.")
         else:
             st.warning("⚠️ Please configure your OpenAI API key to start chatting.")
